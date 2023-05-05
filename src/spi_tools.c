@@ -1,5 +1,7 @@
 #include <rtthread.h>
-#include <drivers/spi.h>
+#include <rtdevice.h>
+
+#if RT_VER_NUM > 0x40101
 
 #define ARG_CMD_POS             1
 #define ARG_DEV_NAME_POS        2
@@ -60,21 +62,21 @@ static void spi_help(void)
     rt_kprintf("spi tools help:\n");
     rt_kprintf("---------------\n");
 
-    rt_kprintf("spi <command> device_name [options]\n");
-    rt_kprintf("spi config device_name [options]\n");
+    rt_kprintf("spitools <command> device_name [options]\n");
+    rt_kprintf("spitools config device_name [options]\n");
     rt_kprintf("\t-s=[speed] spi speed, default=1000000\n");
     rt_kprintf("\t-m=[0-3] spi mode, default=0\n");
     rt_kprintf("\t-l=1:lsb, 0:msb, default=0\n");
     rt_kprintf("\t-b=[value] bits per word, default=8\n");
-    rt_kprintf("spi trans device_name [options] [data0 data1...]\n");
+    rt_kprintf("spitools trans device_name [options] [data0 data1...]\n");
     rt_kprintf("\t-v=[value], default=0xFF\n");
     rt_kprintf("\t-l=[value], default=1, max=512\n");
-    rt_kprintf("spi init device_name bus_name cs_pin\n");
-    rt_kprintf("spi deinit device_name\n\n");
+    rt_kprintf("spitools init device_name bus_name cs_pin\n");
+    rt_kprintf("spitools deinit device_name\n\n");
 }
 static struct rt_spi_device *spi_device = RT_NULL;
 static rt_uint8_t trans_buf[512];
-static void spi(int argc,char *argv[])
+static void spitools(int argc,char *argv[])
 {
     if(argc > 3)
     {
@@ -86,7 +88,7 @@ static void spi(int argc,char *argv[])
             struct rt_spi_device *dev = (struct rt_spi_device *)rt_device_find(dev_name);
             if(dev == RT_NULL)
             {
-                rt_kprintf("[spi] cant't find device:%s\n", dev_name);
+                rt_kprintf("[spitools] cant't find device:%s\n", dev_name);
                 return ;
             }
             struct rt_spi_configuration cfg = {
@@ -134,7 +136,7 @@ static void spi(int argc,char *argv[])
             
             if(RT_EOK != rt_spi_configure(dev, &cfg))
             {
-                rt_kputs("[spi] config failed\n");
+                rt_kputs("[spitools] config failed\n");
                 return ;
             }
         }
@@ -146,7 +148,7 @@ static void spi(int argc,char *argv[])
             struct rt_spi_device *dev = (struct rt_spi_device *)rt_device_find(dev_name);
             if(dev == RT_NULL)
             {
-                rt_kprintf("[spi] cant't find device:%s\n", dev_name);
+                rt_kprintf("[spitools] cant't find device:%s\n", dev_name);
                 return ;
             }
             
@@ -175,7 +177,7 @@ static void spi(int argc,char *argv[])
             rt_ssize_t ret = rt_spi_transfer(dev, trans_buf, trans_buf, trans_len);
             if(ret < 0)
             {
-                rt_kputs("[spi] trans failed\n");
+                rt_kputs("[spitools] trans failed\n");
                 return ;
             }
             rt_kprintf("recv:%d,[", ret);
@@ -198,13 +200,13 @@ static void spi(int argc,char *argv[])
                 spi_device = rt_malloc(sizeof(struct rt_spi_device));
                 if(spi_device == RT_NULL)
                 {
-                    rt_kputs("[spi] create failed\n");
+                    rt_kputs("[spitools] create failed\n");
                     return ;
                 }
             }
             if(RT_EOK != rt_spi_bus_attach_device_cspin(spi_device, dev_name, bus_name, cs_pin, RT_NULL))
             {
-                rt_kputs("[spi] attach failed!\n");
+                rt_kputs("[spitools] attach failed!\n");
                 return ;
             }
         }
@@ -222,15 +224,16 @@ static void spi(int argc,char *argv[])
                 {
                     if(RT_EOK != rt_device_unregister(dev))
                     {
-                        rt_kputs("[spi] unregister failed\n");
+                        rt_kputs("[spitools] unregister failed\n");
                     }
                     return ;
                 }
-                rt_kprintf("[spi] cant't find device:%s\n", dev_name);
+                rt_kprintf("[spitools] cant't find device:%s\n", dev_name);
                 return ;
             }
         }
         spi_help();
     }
 }
-MSH_CMD_EXPORT(spi, spi tools);
+MSH_CMD_EXPORT(spitools, spi tools);
+#endif
