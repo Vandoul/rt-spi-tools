@@ -68,9 +68,10 @@ static void spi_help(void)
     rt_kprintf("\t-m=[0-3] spi mode, default=0\n");
     rt_kprintf("\t-l=1:lsb, 0:msb, default=0\n");
     rt_kprintf("\t-b=[value] bits per word, default=8\n");
-    rt_kprintf("spitools trans device_name [options] [data0 data1...]\n");
+    rt_kprintf("spitools trans device_name [options]\n");
     rt_kprintf("\t-v=[value], default=0xFF\n");
     rt_kprintf("\t-l=[value], default=1, max=512\n");
+    rt_kprintf("spitools trans device_name data0 [data1...]\n");
     rt_kprintf("spitools init device_name bus_name cs_pin\n");
     rt_kprintf("spitools deinit device_name\n\n");
 }
@@ -152,7 +153,7 @@ static void spitools(int argc,char *argv[])
                 return ;
             }
             
-            for(int i=ARG_TRANS_PARA_POS; i<argc; i++)
+            for(i=ARG_TRANS_PARA_POS; i<argc; i++)
             {
                 const char *para = argv[i];
                 if(para[0] == '-' && para[2] == '=')
@@ -167,11 +168,26 @@ static void spitools(int argc,char *argv[])
                             break;
                     }
                 }
+                else
+                {
+                    break;
+                }
             }
             
-            for(int i=0; i<trans_len; i++)
+            if((i == ARG_TRANS_PARA_POS) && (i < argc))
             {
-                trans_buf[i] = value;
+                trans_len = 0;
+                for(; i<argc; i++)
+                {
+                    trans_buf[trans_len++] = str2hex(argv[i]);
+                }
+            }
+            else
+            {
+                for(int i=0; i<trans_len; i++)
+                {
+                    trans_buf[i] = value;
+                }
             }
             
             rt_ssize_t ret = rt_spi_transfer(dev, trans_buf, trans_buf, trans_len);
