@@ -56,6 +56,14 @@ static rt_uint32_t str2hex(const char *str)
     }
     return value;
 }
+static rt_bool_t device_type_check(rt_device_t dev, enum rt_device_class_type type)
+{
+    if(dev->type == type)
+    {
+        return RT_TRUE;
+    }
+    return RT_FALSE;
+}
 static void spi_help(void)
 {
     rt_kprintf("---------------\n");
@@ -84,7 +92,7 @@ static void spitools(int argc,char *argv[])
         const char *cmd_str = argv[ARG_CMD_POS];
         const char *dev_name = argv[ARG_DEV_NAME_POS];
 
-        if(!strcmp(cmd_str, "config"))
+        if(!rt_strcmp(cmd_str, "config"))
         {
             struct rt_spi_device *dev = (struct rt_spi_device *)rt_device_find(dev_name);
             if(dev == RT_NULL)
@@ -92,6 +100,12 @@ static void spitools(int argc,char *argv[])
                 rt_kprintf("[spitools] cant't find device:%s\n", dev_name);
                 return ;
             }
+            if(!device_type_check((void *)dev, RT_Device_Class_SPIDevice))
+            {
+                rt_kprintf("[spitools] %s is not a spi device\n", dev_name);
+                return ;
+            }
+            
             struct rt_spi_configuration cfg = {
                 .mode       = RT_SPI_MODE_0|RT_SPI_MASTER|RT_SPI_MSB,
                 .data_width = 8,
@@ -129,7 +143,7 @@ static void spitools(int argc,char *argv[])
                             }
                             break;
                         case 'b':
-                            cfg.data_width = str2hex(&para[3]);
+                            cfg.data_width = (rt_uint8_t)str2hex(&para[3]);
                             break;
                     }
                 }
@@ -142,14 +156,20 @@ static void spitools(int argc,char *argv[])
             }
         }
 
-        else if(!strcmp(cmd_str, "trans"))
+        else if(!rt_strcmp(cmd_str, "trans"))
         {
+            int i;
             int trans_len = 1;
             rt_uint8_t value = 0xFF;
             struct rt_spi_device *dev = (struct rt_spi_device *)rt_device_find(dev_name);
             if(dev == RT_NULL)
             {
                 rt_kprintf("[spitools] cant't find device:%s\n", dev_name);
+                return ;
+            }
+            if(!device_type_check((void *)dev, RT_Device_Class_SPIDevice))
+            {
+                rt_kprintf("[spitools] %s is not a spi device\n", dev_name);
                 return ;
             }
             
@@ -161,10 +181,10 @@ static void spitools(int argc,char *argv[])
                     switch(para[1])
                     {
                         case 'v':
-                            value = str2hex(&para[3]);
+                            value = (rt_uint8_t)str2hex(&para[3]);
                             break;
                         case 'l':
-                            trans_len = str2hex(&para[3]);
+                            trans_len = (int)str2hex(&para[3]);
                             break;
                     }
                 }
@@ -179,25 +199,25 @@ static void spitools(int argc,char *argv[])
                 trans_len = 0;
                 for(; i<argc; i++)
                 {
-                    trans_buf[trans_len++] = str2hex(argv[i]);
+                    trans_buf[trans_len++] = (rt_uint8_t)str2hex(argv[i]);
                 }
             }
             else
             {
-                for(int i=0; i<trans_len; i++)
+                for(i=0; i<trans_len; i++)
                 {
                     trans_buf[i] = value;
                 }
             }
             
-            rt_ssize_t ret = rt_spi_transfer(dev, trans_buf, trans_buf, trans_len);
+            rt_ssize_t ret = rt_spi_transfer(dev, trans_buf, trans_buf, (rt_uint32_t)trans_len);
             if(ret < 0)
             {
                 rt_kputs("[spitools] trans failed\n");
                 return ;
             }
             rt_kprintf("recv:%d,[", ret);
-            for(int i=0; i<trans_len; i++)
+            for(i=0; i<trans_len; i++)
             {
                 if(i)
                     rt_kprintf(" %02X", trans_buf[i]);
@@ -207,10 +227,10 @@ static void spitools(int argc,char *argv[])
             rt_kputs("]\n");
         }
 
-        else if(!strcmp(cmd_str, "init"))
+        else if(!rt_strcmp(cmd_str, "init"))
         {
             const char *bus_name = argv[ARG_BUS_NAME_POS];
-            int cs_pin = atoi(argv[ARG_CS_PIN_POS]);
+            int cs_pin = (int)str2hex(argv[ARG_CS_PIN_POS]);
             if(spi_device == RT_NULL)
             {
                 spi_device = rt_malloc(sizeof(struct rt_spi_device));
@@ -231,13 +251,18 @@ static void spitools(int argc,char *argv[])
     {
         const char *cmd_str = argv[ARG_CMD_POS];
         const char *dev_name = argv[ARG_DEV_NAME_POS];
-        if(!strcmp(cmd_str, "deinit"))
+        if(!rt_strcmp(cmd_str, "deinit"))
         {
             if(argc == 3)
             {
                 rt_device_t dev = rt_device_find(dev_name);
                 if(dev != RT_NULL)
                 {
+                    if(!device_type_check((void *)dev, RT_Device_Class_SPIDevice))
+                    {
+                        rt_kprintf("[spitools] %s is not a spi device\n", dev_name);
+                        return ;
+                    }
                     if(RT_EOK != rt_device_unregister(dev))
                     {
                         rt_kputs("[spitools] unregister failed\n");
